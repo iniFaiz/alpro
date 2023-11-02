@@ -6,7 +6,7 @@ import time
 # Tema warna
 colors = {
     "night": {
-        "bg": "##3889EC",
+        "bg": "#3889EC",
         "fg": "#F0F0F0",
         "btn": "#5084B9",
         "border": "#1E1E1E",
