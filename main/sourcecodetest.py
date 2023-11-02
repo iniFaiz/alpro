@@ -248,10 +248,10 @@ class TimerApp:
             timer_time = ("{:02d}:{:02d}".format(int(hours), int(minutes)))
             self.timer_label.configure(text=timer_time)
 
-            if remaining_time == 0:
-                alarm_function()
-            else:
-                self.root.after(1000, self.countdown, remaining_time - 1, alarm_function)
+        if remaining_time == 0:
+            alarm_function()
+        else:
+            self.root.after(1000, self.countdown, remaining_time - 1, alarm_function)
 
     def hide_all_content(self):
         for frame in (self.podomoro_frame, self.todo_frame, self.stopwatch_frame, self.timer_frame):
