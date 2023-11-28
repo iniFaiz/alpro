@@ -73,7 +73,7 @@ todo_btn = ctk.CTkButton(sidebar,
                          fg_color="#75A5D0", 
                          hover_color="#5084B9", 
                          height=50,
-                         command= lambda: indicate(todo_btn, todolist))
+                         command= lambda: indicate(todo_btn, todo_page))
 todo_btn.pack(pady=20, padx=20, fill='x')
  
 # tombol stopwatch
@@ -82,7 +82,8 @@ stopwatch_btn = ctk.CTkButton(sidebar,
                               corner_radius=8, 
                               fg_color="#75A5D0", 
                               hover_color="#5084B9", 
-                              height=50)
+                              height=50,
+                              command= lambda: indicate(stopwatch_btn, stopwatch_page))
 stopwatch_btn.pack(pady=20, padx=20, fill='x')
  
 # tombol analisis
@@ -107,7 +108,7 @@ def pomodoro_page():
     pomodoro_time = 1500 #dalam detik = 25 menit
     # Tombol up untuk memulai pomodoro
     up_button = ctk.CTkButton(main_content, 
-                          text="▲", 
+                          text="▶", 
                           width=80, 
                           height=80, 
                           corner_radius=20, 
@@ -169,6 +170,103 @@ def update_pomodoro_timer():
 # Fungsi untuk menampilkan notifikasi
 toaster = ToastNotifier()
  
+def todo_page():
+    global task_listbox
+    # Membuat frame untuk To-Do List
+    todo_frame = ctk.CTkFrame(main_content)
+    todo_frame.pack(pady=20, padx=20, fill="both", expand=True)
+
+    # Tombol untuk membuka pop-up penambahan task
+    add_task_btn = ctk.CTkButton(todo_frame, text="+", command=open_add_task_popup)
+    add_task_btn.pack(side="top", pady=10)
+
+    # Listbox untuk menampilkan daftar task
+    task_listbox = tk.Listbox(todo_frame)
+    task_listbox.pack(pady=20, fill="both", expand=True)
+
+    # Tombol untuk menghapus task yang dipilih
+    delete_task_btn = ctk.CTkButton(todo_frame, text="Delete Task", command=delete_task)
+    delete_task_btn.pack(side="bottom", pady=10)
+
+# Fungsi untuk menambahkan task
+def add_task():
+    task = task_entry.get()
+    if task:
+        task_listbox.insert(tk.END, task)
+        task_entry.delete(0, tk.END)
+
+# Fungsi untuk menghapus task yang dipilih
+def delete_task():
+    selected_task_index = task_listbox.curselection()
+    if selected_task_index:
+        task_listbox.delete(selected_task_index)
+
+# Membuat pop-up untuk menambahkan task
+def open_add_task_popup():
+    popup = ctk.CTkToplevel(app)
+    popup.title("Add Task")
+    
+    global task_entry
+    task_entry = ctk.CTkEntry(popup, width=200)
+    task_entry.pack(pady=10)
+    
+    add_task_button = ctk.CTkButton(popup, text="Add Task", command=add_task)
+    add_task_button.pack()
+
+def stopwatch_page():
+    global stopwatch_running
+    global stopwatch_counter
+    global time_label
+    stopwatch_running = False
+    stopwatch_counter = 0  # Menghitung dalam milidetik
+    # Membuat label untuk menampilkan waktu
+    time_label = ctk.CTkLabel(main_content, pady= 150, text="00:00:00.00", font=("Helvetica", 100,))
+    time_label.pack(pady=20)
+
+    # Membuat tombol untuk kontrol stopwatch
+    start_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="▶", command=start_stopwatch)
+    start_button.pack(side= 'left', padx=10, )
+
+    stop_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="■", command=stop_stopwatch)
+    stop_button.pack(side= 'left', padx=210,)
+
+    reset_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="Reset", command=reset_stopwatch)
+    reset_button.pack(side= 'right', padx=10,) 
+
+# Fungsi untuk memperbarui waktu pada label
+def update_time():
+    if stopwatch_running:
+        global stopwatch_counter
+        stopwatch_counter += 16  # Menambah 10 milidetik
+        milliseconds = stopwatch_counter % 1000
+        seconds = (stopwatch_counter // 1000) % 60
+        minutes = (stopwatch_counter // (1000 * 60)) % 60
+        hours = (stopwatch_counter // (1000 * 60 * 60)) % 24
+
+        time_display = f"{hours:02d}:{minutes:02d}:{seconds:02d}.{int(milliseconds/10):02d}"
+        time_label.configure(text=time_display)
+        app.after(10, update_time)  # Update setiap 10 milidetik
+
+# Fungsi untuk memulai/melanjutkan stopwatch
+def start_stopwatch():
+    global stopwatch_running
+    if not stopwatch_running:
+        stopwatch_running = True
+        update_time()
+
+# Fungsi untuk menghentikan stopwatch
+def stop_stopwatch():
+    global stopwatch_running
+    stopwatch_running = False
+
+# Fungsi untuk mereset stopwatch
+def reset_stopwatch():
+    global stopwatch_counter, stopwatch_running
+    stopwatch_running = False
+    stopwatch_counter = 0
+    time_label.configure(text="00:00:00.00")
+
+
 
 
 
