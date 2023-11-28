@@ -1,268 +1,340 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+import tkcalendar
+import customtkinter as ctk
 import time
+from win10toast import ToastNotifier
 
-# Tema warna
-colors = {
-    "night": {
-        "bg": "#3889EC",
-        "fg": "#F0F0F0",
-        "btn": "#5084B9",
-        "border": "#1E1E1E",
-    },
-    "day": {
-        "bg": "#A9CCE3",
-        "fg": "#1C1C1C",
-        "btn": "#5084B9",
-        "border": "#5084B9",
-    },
-}
+app = ctk.CTk()
+app.title("organize")
+app.geometry("900x600")
+app.resizable(width=0, height=0)
 
-class TimerApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("COBAKKK")
-        self.root.configure(bg=colors["day"]["bg"])
- 
-        # Menu Bar
-        self.menubar = tk.Menu(self.root)
-        self.root.config(menu=self.menubar)
- 
-        # Menu Tema
-        self.theme_menu = tk.Menu(self.menubar, tearoff=0)
-        self.theme_menu.add_command(label="Hari", command=lambda: self.set_theme("day"))
-        self.theme_menu.add_command(label="Malam", command=lambda: self.set_theme("night"))
-        self.menubar.add_cascade(label="Tema", menu=self.theme_menu)
+# frame samping
+sidebar = ctk.CTkFrame(master=app,
+                       width=200,
+                       corner_radius=0,
+                       fg_color="#FAFAF5",
+                       border_width=10,
+                       border_color="#A9CCE3",)
+sidebar.pack(side='left', fill='y',)
 
-        # Buat ttk.PanedWindow
-        self.paned_window = tk.PanedWindow(self.root, orient="horizontal")
-        self.paned_window.pack(fill="both", expand=True, padx=8, pady=8)
+# main content
+main_content = ctk.CTkFrame(master=app,
+                            fg_color="#A9CCE3",
+                            corner_radius=0)
+main_content.pack(side='right', fill='both', expand=True)
 
-        # Buat frame untuk menu tombol
-        self.menu_frame = tk.Frame(self.paned_window, bg=colors["day"]["bg"])
-        self.paned_window.add(self.menu_frame)
+# variable global untuk pomodoro
+pomodoro_running = False
+pomodoro_time = 1500  # dalam detik = 25 menit
+pomodoro_timer_label = None
 
-        # Buat frame untuk konten fitur
-        self.content_frame = tk.Frame(self.paned_window, bg=colors["day"]["bg"])
-        self.paned_window.add(self.content_frame)
+# variable global untuk todo list
+todo_entry = None
+todo_listbox = None
 
-        # Buat tombol-tombol menu
-        self.podomoro_btn = ttk.Button(self.menu_frame, text="Podomoro", command=self.show_podomoro)
-        self.podomoro_btn.pack(pady=10, fill="x")
+# variable global untuk stopwatch
+stopwatch_running = False
+stopwatch_seconds = 0
+stopwatch_label = None
+result_label = None
+time_listbox = None
 
-        self.todo_btn = ttk.Button(self.menu_frame, text="To-Do List", command=self.show_todo)
-        self.todo_btn.pack(pady=10, fill="x")
+# variable global untuk notifikasi
+toaster = ToastNotifier()
 
-        self.stopwatch_btn = ttk.Button(self.menu_frame, text="Stopwatch", command=self.show_stopwatch)
-        self.stopwatch_btn.pack(pady=10, fill="x")
 
-        self.timer_btn = ttk.Button(self.menu_frame, text="Timer", command=self.show_timer)
-        self.timer_btn.pack(pady=10, fill="x")
+# function
+def delete_pages(exclude_frame = None):
+    for frame in main_content.winfo_children():
+        if frame != exclude_frame:
+            frame.destroy()
 
-        # Inisialisasi frame pertama yang ditampilkan (Pomodoro)
-        self.podomoro_frame = tk.Frame(self.content_frame, bg=colors["day"]["bg"])
-        self.podomoro_frame.pack(padx=15, pady=15)
 
-        self.timer_frame = tk.Frame(self.content_frame, bg=colors["day"]["bg"])
-        self.timer_frame.pack(padx=15, pady=15)
+def hide_indicate():
+    pomodoro_btn.configure(fg_color='#75A5D0')
+    todo_btn.configure(fg_color='#75A5D0')
+    stopwatch_btn.configure(fg_color="#75A5D0")
+    analisis_btn.configure(fg_color="#75A5D0")
 
-        self.stopwatch_frame = tk.Frame(self.content_frame, bg=colors["day"]["bg"])
-        self.stopwatch_frame.pack(padx=15, pady=15)
 
-        self.todo_frame = tk.Frame(self.content_frame, bg=colors["day"]["bg"])
-        self.todo_frame.pack(padx=15, pady=15)
+def indicate(lb, page):
+    hide_indicate()
+    lb.configure(fg_color='#5084B9')
+    delete_pages()
+    page()
 
-        # Pomodoro Frame
-        self.podomoro_timer_label = tk.Label(self.podomoro_frame, text="00:00", bg=colors["day"]["bg"], fg=colors["day"]["fg"], font=("Helvetica", 40))
-        self.podomoro_timer_label.pack(pady=10)
 
-        
-        self.podomoro_label = tk.Label(self.podomoro_frame, text="Podomoro", bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-        self.podomoro_label.pack(pady=8)
+# tombol pomodoro
+pomodoro_btn = ctk.CTkButton(sidebar,
+                             text='Pomodoro',
+                             corner_radius=8,
+                             fg_color="#75A5D0",
+                             hover_color="#5084B9",
+                             height=50,
+                             command=lambda: indicate(pomodoro_btn, pomodoro_page))
+pomodoro_btn.pack(pady=20, padx=20, fill='x')
 
-        self.podomoro_entry = tk.Entry(self.podomoro_frame)
-        self.podomoro_entry.pack(pady=5)
+# tombol todo list
+todo_btn = ctk.CTkButton(sidebar,
+                         text='To-Do List',
+                         corner_radius=8,
+                         fg_color="#75A5D0",
+                         hover_color="#5084B9",
+                         height=50,
+                         command=lambda: indicate(todo_btn, lambda: todolist()))
+todo_btn.pack(pady=20, padx=20, fill='x')
 
-        self.podomoro_start_btn = tk.Button(self.podomoro_frame, text="Mulai", command=self.start_pomodoro)
-        self.podomoro_start_btn.pack(pady=5)
+# tombol stopwatch
+stopwatch_btn = ctk.CTkButton(sidebar,
+                              text='Stopwatch',
+                              corner_radius=8,
+                              fg_color="#75A5D0",
+                              hover_color="#5084B9",
+                              height=50,
+                              command=lambda: indicate(stopwatch_btn, stopwatch_page))
+stopwatch_btn.pack(pady=20, padx=20, fill='x')
 
-        self.podomoro_time = 0
-        self.podomoro_running = False
+# tombol analisis
+analisis_btn = ctk.CTkButton(sidebar,
+                             text='Analisis',
+                             corner_radius=8,
+                             fg_color="#75A5D0",
+                             hover_color="#5084B9",
+                             height=50)
+analisis_btn.pack(pady=20, padx=20, fill='x')
 
-        # Timer Frame
-        self.timer_label = tk.Label(self.timer_frame, text="Timer", bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-        self.timer_label.pack(pady=8)
 
-        self.timer_entry = tk.Entry(self.timer_frame)
-        self.timer_entry.pack(pady=5)
+# function for To-Do List
+def todolist():
+    global todo_entry, todo_listbox, deadline_entry
+    todolist_frame = ctk.CTkFrame(master=main_content,
+                                  fg_color= "#A9CCE3")
+    todolist_frame.pack(expand=True, fill='both')
 
-        self.timer_start_btn = tk.Button(self.timer_frame, text="Mulai", command=self.start_timer)
-        self.timer_start_btn.pack(pady=5)
-
-        self.timer_time = 0
-
-        # Stopwatch Frame
-        self.stopwatch_label = tk.Label(self.stopwatch_frame, text="Stopwatch", bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-        self.stopwatch_label.pack(pady=8)
-
-        self.stopwatch_start_btn = tk.Button(self.stopwatch_frame, text="Mulai", command=self.start_stopwatch)
-        self.stopwatch_start_btn.pack(pady=5)
-
-        self.stopwatch_stop_btn = tk.Button(self.stopwatch_frame, text="Hentikan", command=self.stop_stopwatch)
-        self.stopwatch_stop_btn.pack(pady=5)
-
-        self.stopwatch_reset_btn = tk.Button(self.stopwatch_frame, text="Reset", command=self.reset_stopwatch)
-        self.stopwatch_reset_btn.pack(pady=5)
-
-        self.stopwatch_start_time = 0
-        self.stopwatch_running = False
-
-        # To-Do List Frame
-        self.todo_listbox = tk.Listbox(self.todo_frame, bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-        self.todo_listbox.pack(pady=5)
-
-        self.todo_entry = tk.Entry(self.todo_frame)
-        self.todo_entry.pack(pady=5)
-
-        self.todo_add_btn = tk.Button(self.todo_frame, text="Tambah", command=self.add_todo)
-        self.todo_add_btn.pack(pady=5)
-
-        self.todo_remove_btn = tk.Button(self.todo_frame, text="Hapus", command=self.remove_todo)
-        self.todo_remove_btn.pack(pady=5)
-
-        self.show_podomoro()
-
-    # Metode show_podomoro, show_todo, show_stopwatch, show_timer, hide_all_content, dan lainnya seperti yang Anda miliki
-
-    def show_podomoro(self):
-        self.hide_all_content()
-        self.podomoro_frame.pack()
-
-    def show_todo(self):
-        self.hide_all_content()
-        self.todo_frame.pack()
-
-    def show_stopwatch(self):
-        self.hide_all_content()
-        self.stopwatch_frame.pack()
-
-    def show_timer(self):
-        self.hide_all_content()
-        self.timer_frame.pack()
-
-    def hide_all_content(self):
-        frames = [self.podomoro_frame, self.todo_frame, self.stopwatch_frame, self.timer_frame]
-        for frame in frames:
-            if frame:
-                frame.pack_forget()
+    todo_label = ctk.CTkLabel(master=todolist_frame,
+                              text="To-Do List",
+                              font=('Arial Bold', 20))
+    todo_label.pack(pady=20)
 
     
-    def set_theme(self, theme):
-        if theme == "day":
-            self.root.configure(bg=colors["day"]["bg"])
-            self.podomoro_label.configure(bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-            self.timer_label.configure(bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-            self.stopwatch_label.configure(bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-            self.todo_listbox.configure(bg=colors["day"]["bg"], fg=colors["day"]["fg"])
-        elif theme == "night":
-            self.root.configure(bg=colors["night"]["bg"])
-            self.podomoro_label.configure(bg=colors["night"]["bg"], fg=colors["night"]["fg"])
-            self.timer_label.configure(bg=colors["night"]["bg"], fg=colors["night"]["fg"])
-            self.stopwatch_label.configure(bg=colors["night"]["bg"], fg=colors["night"]["fg"])
-            self.todo_listbox.configure(bg=colors["night"]["bg"], fg=colors["night"]["fg"])
+    entry_frame = ctk.CTkFrame(todolist_frame)
+    entry_frame.pack(pady=10)
 
-    def start_pomodoro(self):
-        try:
-            self.podomoro_time = int(self.podomoro_entry.get())
-        except ValueError:
-            messagebox.showerror("Error", "Entri waktu tidak valid. Silakan masukkan angka.")
-            return
+    deadline_frame = ctk.CTkFrame(todolist_frame)
+    deadline_frame.pack(pady=10)
 
-        self.podomoro_entry.delete(0, "end")
-        self.countdown(self.podomoro_time * 60, self.podomoro_alarm)
-        self.update_podomoro_timer()
+    # Tambah Label di sebelah kiri Entry
+    label_placeholder = ctk.CTkLabel(entry_frame,
+                                     text="Masukkan To-Do List")
+    label_placeholder.pack(side="left", padx=5)
 
-    def update_podomoro_timer(self):
-        minutes, seconds = divmod(self.podomoro_time, 60)
+    # Set teks default untuk Entry
+    todo_entry = ctk.CTkEntry(entry_frame,
+                              font=("Helvetica", 14),
+                              width=180)
+    todo_entry.pack(side="left", padx=5)
+    
+    # Tambah Entry untuk Deadline
+    deadline_label = ctk.CTkLabel(deadline_frame,
+                                  text="Deadline:")
+    deadline_label.pack(side="left", pady=5)
+
+    deadline_entry = tkcalendar.DateEntry(deadline_frame,
+                                          width=52,
+                                          fg_colour='#5084B9')
+    deadline_entry.pack(side="left", pady=5)
+
+
+    todo_listbox = tk.Listbox(todolist_frame,
+                              font=("Helvetica", 14),
+                              selectmode=tk.SINGLE,
+                              height=18, width=75)
+    todo_listbox.pack(pady=10)
+
+    add_task_button = ctk.CTkButton(todolist_frame,
+                                    text="Add Task",
+                                    command=add_task)
+    add_task_button.pack(side='left', padx=20)
+
+    delete_task_button = ctk.CTkButton(todolist_frame,
+                                       text="Delete Task",
+                                       command=delete_task)
+    delete_task_button.pack(side='right', padx=20)
+    
+    return todolist_frame
+
+
+# function for Stopwatch
+def stopwatch_page():
+    global stopwatch_running, stopwatch_seconds, stopwatch_label, result_label, time_listbox
+    stopwatch_frame = ctk.CTkFrame(master=main_content,
+                                   fg_color= "#A9CCE3")
+    stopwatch_frame.pack(expand=True, fill='both')
+
+    stopwatch_label = ctk.CTkLabel(stopwatch_frame,
+                                   text="00:00",
+                                   font=("Helvetica", 180))
+    stopwatch_label.pack(pady=10) 
+
+    # Tambahkan Listbox untuk menampilkan waktu yang di-reset
+    time_listbox = tk.Listbox(stopwatch_frame,
+                              font=("Helvetica", 14),
+                              selectmode=tk.SINGLE,
+                              height=5, width=60)
+    time_listbox.pack(pady=10, padx=60)  # Tampilkan Listbox
+
+    delete_time_button = ctk.CTkButton(stopwatch_frame,
+                                        text="Delete",
+                                        command= delete_time)
+    delete_time_button.pack(pady=20)
+
+    result_label = ctk.CTkLabel(stopwatch_frame,
+                                text="",
+                                font=("Helevetica", 16))
+    result_label.pack(pady=5)  
+    
+    start_stopwatch_button = ctk.CTkButton(stopwatch_frame,
+                                           text="Start",
+                                           command=start_stopwatch)
+    start_stopwatch_button.pack(side='left', padx=100)
+
+    reset_stopwatch_button = ctk.CTkButton(stopwatch_frame,
+                                           text="Reset",
+                                           command=reset_stopwatch)
+    reset_stopwatch_button.pack(side='right', padx=100)
+     
+# function for Pomodoro
+def pomodoro_page():
+    global pomodoro_running, pomodoro_time, pomodoro_timer_label
+    pomodoro_frame = ctk.CTkFrame(master=main_content,
+                                  fg_color= "#A9CCE3")
+    pomodoro_frame.pack(expand=True, fill='both')
+
+    pomodoro_timer_label = ctk.CTkLabel(pomodoro_frame,
+                                        text="25:00",
+                                        font=("Helvetica", 180))
+    pomodoro_timer_label.pack(pady=100)
+
+    up_button = ctk.CTkButton(pomodoro_frame,
+                              text="▲",
+                              width=80,
+                              height=80,
+                              corner_radius=20,
+                              command=start_pomodoro)
+    up_button.pack(side='left', padx=110)
+
+    reset_button = ctk.CTkButton(pomodoro_frame,
+                                 text="■",
+                                 width=80,
+                                 height=80,
+                                 corner_radius=20,
+                                 command=stop_pomodoro)
+    reset_button.pack(side='right', padx=110)
+
+    pause_button = ctk.CTkButton(pomodoro_frame,
+                                 text="||",
+                                 width=80,
+                                 height=80,
+                                 corner_radius=20,
+                                 command=pause_pomodoro)
+    pause_button.pack(side='right', padx=20)
+
+
+# function for Stopwatch
+def start_stopwatch():
+    global stopwatch_running, stopwatch_seconds
+    if not stopwatch_running:
+        stopwatch_running = True
+        update_stopwatch()
+
+def reset_stopwatch():
+    global stopwatch_running, stopwatch_seconds
+    stopwatch_running = False
+    minutes, seconds = divmod(stopwatch_seconds, 60)
+    timer_text = "{:02d}:{:02d}".format(minutes, seconds)
+    result_label.configure(text=f"Stopwatch Result: {timer_text}")  # Tampilkan hasil stopwatch di label
+    time_listbox.insert(tk.END, timer_text)  # Tambahkan waktu ke Listbox
+    stopwatch_seconds = 0
+    stopwatch_label.configure(text="00:00")
+
+def update_stopwatch():
+    global stopwatch_running, stopwatch_seconds
+    if stopwatch_running:
+        minutes, seconds = divmod(stopwatch_seconds, 60)
         timer_text = "{:02d}:{:02d}".format(minutes, seconds)
-        self.podomoro_timer_label.config(text=timer_text)
-        self.podomoro_time -= 1
+        stopwatch_label.configure(text=timer_text)
+        stopwatch_seconds += 1
+        app.after(1000, update_stopwatch)
+        
+def delete_time():
+    global time_listbox
+    selected_time_index = time_listbox.curselection()
+    if selected_time_index:
+        time_listbox.delete(selected_time_index)
 
-        if self.podomoro_time >= 0:
-            self.root.after(1000, self.update_podomoro_timer)
-            
-    def podomoro_alarm(self):
-        messagebox.showinfo("Pomodoro", "Waktunya istirahat. Bersantailah sebentar.")
+
+# function for Pomodoro
+def start_pomodoro():
+    global pomodoro_running, pomodoro_time
+    if not pomodoro_running:
+        pomodoro_running = True
+        update_pomodoro_timer()
 
 
-    def start_timer(self):
-        try:
-            self.timer_time = int(self.timer_entry.get())
-        except ValueError:
-            messagebox.showerror("Error", "Entri waktu tidak valid. Silakan masukkan angka.")
-            return
+def pause_pomodoro():
+    global pomodoro_running
+    pomodoro_running = False
 
-        self.timer_entry.delete(0, "end")
-        self.countdown(self.timer_time, self.timer_alarm)
 
-    def timer_alarm(self):
-        messagebox.showinfo("Timer", "Waktunya selesai!")
+def stop_pomodoro():
+    global pomodoro_running, pomodoro_time
+    pomodoro_running = False
+    pomodoro_time = 1500
+    pomodoro_timer_label.configure(text="25:00")
 
-    def start_stopwatch(self):
-        self.stopwatch_start_time = time.time()
-        self.stopwatch_running = True
-        self.update_stopwatch()
 
-    def stop_stopwatch(self):
-        self.stopwatch_running = False
+def update_pomodoro_timer():
+    global pomodoro_running, pomodoro_time
+    if pomodoro_running and pomodoro_time > 0:
+        minutes, seconds = divmod(pomodoro_time, 60)
+        timer_text = "{:02d}:{:02d}".format(minutes, seconds)
+        pomodoro_timer_label.configure(text=timer_text)
+        pomodoro_time -= 1
+        app.after(1000, update_pomodoro_timer)
+    elif pomodoro_running and pomodoro_time == 0:
+        pomodoro_running = False
+        pomodoro_timer_label.configure(text="25:00")
+        toaster.show_toast("Pomodoro", "Waktu pomodoro sudah habis. Istirahat sejenak!", duration=300)
 
-    def reset_stopwatch(self):
-        self.stopwatch_label.configure(text="00:00:00")
 
-    def update_stopwatch(self):
-        if self.stopwatch_running:
-            elapsed_time = time.time() - self.stopwatch_start_time
-            elapsed_mins, elapsed_secs = divmod(elapsed_time, 60)
-            elapsed_hours, elapsed_mins = divmod(elapsed_mins, 60)
+# function for To-Do List
+def add_task():
+    global todo_entry, todo_listbox
+    task = todo_entry.get()
+    if task:
+        todo_listbox.insert(tk.END, task)
+        todo_entry.delete(0, tk.END)
 
-            stopwatch_time = ("{:02d}:{:02d}:{:02d}".format(int(elapsed_hours), int(elapsed_mins), int(elapsed_secs)))
-            self.stopwatch_label.configure(text=stopwatch_time)
 
-            self.root.after(1000, self.update_stopwatch)
+# function for To-Do List
+def delete_task():
+    global todo_listbox
+    selected_task_index = todo_listbox.curselection()
+    if selected_task_index:
+        todo_listbox.delete(selected_task_index)
+        
+# function for To-Do List
+def add_task():
+    global todo_entry, todo_listbox, deadline_entry
+    task = todo_entry.get()
+    deadline = deadline_entry.get_date()  # Get the selected date from DateEntry
 
-    def add_todo(self):
-        todo_item = self.todo_entry.get()
-        if todo_item:
-            self.todo_listbox.insert("end", todo_item)
-            self.todo_entry.delete(0, "end")
+    if task:
+        task_with_deadline = f"{task} - Deadline: {deadline.strftime('%Y-%m-%d')}"
+        todo_listbox.insert(tk.END, task_with_deadline)
+        todo_entry.delete(0, tk.END)
+        deadline_entry.set_date(None) 
 
-    def remove_todo(self):
-        selected_item = self.todo_listbox.curselection()
-        if selected_item:
-            self.todo_listbox.delete(selected_item)
 
-    def countdown(self, remaining_time, alarm_function):
-        if remaining_time >= 0:
-            hours, minutes = divmod(remaining_time, 60)
-            timer_time = ("{:02d}:{:02d}".format(int(hours), int(minutes)))
-            self.timer_label.configure(text=timer_time)
-
-            if remaining_time == 0:
-                alarm_function()
-            else:
-                self.root.after(1000, self.countdown, remaining_time - 1, alarm_function)
-
-    def hide_all_content(self):
-        for frame in (self.podomoro_frame, self.todo_frame, self.stopwatch_frame, self.timer_frame):
-            frame.pack_forget()
-
-    def start(self):
-        self.root.mainloop()
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.geometry("600x400")
-    app = TimerApp(root)
-    app.start()
-
+app.mainloop()
