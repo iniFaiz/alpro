@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkcalendar
 import customtkinter as ctk
 import time
 import csv
@@ -23,8 +24,6 @@ sidebar = ctk.CTkFrame(master=app,
                        border_width=10, 
                        border_color="#A9CCE3",)
 sidebar.pack(side='left', fill='y',)
-# sidebar.pack_propagate(False)
-# sidebar.configure()
  
 #main content
 main_content = ctk.CTkFrame(master=app, 
@@ -69,7 +68,7 @@ todo_btn = ctk.CTkButton(sidebar,
                          fg_color="#75A5D0", 
                          hover_color="#5084B9", 
                          height=50,
-                         command= lambda: indicate(todo_btn, todo_page))
+                         command= lambda: indicate(todo_btn, todolist))
 todo_btn.pack(pady=20, padx=20, fill='x')
  
 # tombol stopwatch
@@ -92,6 +91,8 @@ analisis_btn = ctk.CTkButton(sidebar,
                              command= lambda: indicate(analisis_btn, analisis_page))
 analisis_btn.pack(pady=20, padx=20, fill='x')
 
+# POMODORO
+
 def pomodoro_page():
     global notifier
     global timer_seconds
@@ -113,16 +114,44 @@ def pomodoro_page():
     timer_running = False
 
     # Timer label
-    timer_label = ctk.CTkLabel(main_content, pady=150, text="30:00", font=("Arial", 100))
+    timer_label = ctk.CTkLabel(main_content,
+                               pady=150,
+                               text="30:00",
+                               font=("Arial", 100))
     timer_label.pack(pady=20)
 
     # Buttons
-    start_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20,text="▶", command=start_timer)
-    add_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20,text="+", command=add_time)
-    subtract_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20,text="-", command=subtract_time)
-    stop_button = ctk.CTkButton(main_content, text="Stop", command=stop_timer)
-    resume_button = ctk.CTkButton(main_content, text="Resume", command=resume_timer)
-    reset_button = ctk.CTkButton(main_content, text="Reset", command=reset_timer)
+    start_button = ctk.CTkButton(main_content,
+                                 width=80, height=80,
+                                 corner_radius=20,
+                                 text="▶",
+                                 command=start_timer)
+    
+    add_button = ctk.CTkButton(main_content, 
+                               width=80, 
+                               height=80, 
+                               corner_radius=20,
+                               text="+", 
+                               command=add_time)
+    
+    subtract_button = ctk.CTkButton(main_content, 
+                                    width=80, 
+                                    height=80, 
+                                    corner_radius=20,
+                                    text="-", 
+                                    command=subtract_time)
+    
+    stop_button = ctk.CTkButton(main_content, 
+                                text="Stop", 
+                                command=stop_timer)
+    
+    resume_button = ctk.CTkButton(main_content, 
+                                  text="Resume", 
+                                  command=resume_timer)
+    
+    reset_button = ctk.CTkButton(main_content, 
+                                 text="Reset", 
+                                 command=reset_timer)
 
     start_button.pack(side='left', padx=10, pady=10)
     add_button.pack(side='left', padx=210, pady=10)
@@ -207,76 +236,116 @@ def update_timer_label():
     minutes, seconds = divmod(timer_seconds, 60)
     timer_label.configure(text=f"{minutes:02d}:{seconds:02d}")
 
+# TO DO LIST
+
+todo_listbox=None
+todo_entries = []
  
-def todo_page():
-    global task_listbox
-    # Membuat frame untuk To-Do List
-    todo_frame = ctk.CTkFrame(main_content)
-    todo_frame.pack(pady=20, padx=20, fill="both", expand=True)
-
-    # Tombol untuk membuka pop-up penambahan task
-    add_task_btn = ctk.CTkButton(todo_frame, text="+", command=open_add_task_popup)
-    add_task_btn.pack(side="top", pady=10)
-
-    # Listbox untuk menampilkan daftar task
-    task_listbox = tk.Listbox(todo_frame)
-    task_listbox.pack(pady=20, fill="both", expand=True)
-
-    # Tombol untuk menghapus task yang dipilih
-    delete_task_btn = ctk.CTkButton(todo_frame, text="Delete Task", command=delete_task)
-    delete_task_btn.pack(side="bottom", pady=10)
+def todolist():
+    global todo_entry, todo_listbox, deadline_entry
+    todolist_frame = ctk. CTkFrame(master = main_content,
+                                   fg_color="#A9CCE3")
+    todolist_frame.pack(expand=True, fill='both')
     
+    todo_label = ctk.CTkLabel(master=todolist_frame,
+                              text="To-Do List",
+                              font = ('Arial Bold', 20))
+    todo_label.pack(pady=20)
+    
+    entry_frame = ctk.CTkFrame(todolist_frame)
+    entry_frame.pack(pady=10)
+
+    deadline_frame = ctk.CTkFrame(todolist_frame)
+    deadline_frame.pack(pady=10)
+
+    # Tambah Label di sebelah kiri Entry
+    label_placeholder = ctk.CTkLabel(entry_frame,
+                                     text="Masukkan To-Do List")
+    label_placeholder.pack(side="left", padx=5)
+
+    # Set teks default untuk Entry
+    todo_entry = ctk.CTkEntry(entry_frame,
+                              font=("Helvetica", 14),
+                              width=180)
+    todo_entry.pack(side="left", padx=5)
+    
+    # Tambah Entry untuk Deadline
+    deadline_label = ctk.CTkLabel(deadline_frame,
+                                  text="Deadline:")
+    deadline_label.pack(side="left", pady=5)
+
+    deadline_entry = tkcalendar.DateEntry(deadline_frame,
+                                          width=52,
+                                          fg_colour='#5084B9')
+    deadline_entry.pack(side="left", pady=5)
+
+
+    todo_listbox = tk.Listbox(todolist_frame,
+                              font=("Helvetica", 14),
+                              selectmode=tk.SINGLE,
+                              height=18, width=75)
+    todo_listbox.pack(pady=10)
+
+    add_task_button = ctk.CTkButton(todolist_frame,
+                                    text="Add Task",
+                                    command=add_task)
+    add_task_button.pack(side='left', padx=20)
+
+    delete_task_button = ctk.CTkButton(todolist_frame,
+                                       text="Delete Task",
+                                       command=delete_task)
+    delete_task_button.pack(side='right', padx=20)
+
     load_datatodo()
 
-# database todolist
-def add_data():
-    item = task_entry.get().strip()
-    if item:
-        task_listbox.insert(tk.END, item)
-        data_todo()
+# function for To-Do List
+def add_task():
+    global todo_entry, todo_listbox
+    task = todo_entry.get()
+    if task:
+        todo_listbox.insert(tk.END, task)
+        todo_entry.delete(0, tk.END)
 
-# save data
-def data_todo():
+
+# function for To-Do List
+def add_task():
+    global todo_entry, todo_listbox, deadline_entry, todo_entries
+    task = todo_entry.get()
+    deadline = deadline_entry.get_date()
+
+    if task:
+        task_with_deadline = f"{task} - Deadline: {deadline.strftime('%Y-%m-%d')}"
+        todo_entries.append(task_with_deadline)
+        todo_listbox.insert(tk.END, task_with_deadline)
+        todo_entry.delete(0, tk.END)
+        deadline_entry.set_date(None)
+        add_data()
+
+def delete_task():
+    global todo_listbox, todo_entries
+    selected_task_index = todo_listbox.curselection()
+    if selected_task_index:
+        todo_listbox.delete(selected_task_index)
+        todo_entries.pop(selected_task_index[0])
+        add_data()
+
+def add_data():
     with open('todolist.csv', 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
-        for i in range(task_listbox.size()):
-            writer.writerow([task_listbox.get(i)])
-    
+        for entry in todo_entries:
+            writer.writerow([entry])
 
-# Fungsi untuk menambahkan task
-def add_task():
-    task = task_entry.get()
-    if task:
-        task_listbox.insert(tk.END, task)
-        task_entry.delete(0, tk.END)
-
-# Fungsi untuk menghapus task yang dipilih
-def delete_task():
-    selected_task_index = task_listbox.curselection()
-    if selected_task_index:
-        task_listbox.delete(selected_task_index)
-
-#load database todo
 def load_datatodo():
     try:
-        with open('todolist.csv', 'r', newline= '') as file:
+        with open('todolist.csv', 'r', newline='') as file:
             reader = csv.reader(file)
             for row in reader:
-                task_listbox.insert(tk.END, row[0])
+                todo_entries.append(row[0])
+                todo_listbox.insert(tk.END, row[0])
     except FileNotFoundError:
         pass
-
-# Membuat pop-up untuk menambahkan task
-def open_add_task_popup():
-    popup = ctk.CTkToplevel(app)
-    popup.title("Add Task")
-    
-    global task_entry
-    task_entry = ctk.CTkEntry(popup, width=200)
-    task_entry.pack(pady=10)
-    
-    add_task_button = ctk.CTkButton(popup, text="Add Task", command=add_data)
-    add_task_button.pack()
+   
+# STOPWATCH        
 
 def stopwatch_page():
     global stopwatch_running
@@ -285,17 +354,35 @@ def stopwatch_page():
     stopwatch_running = False
     stopwatch_counter = 0  # Menghitung dalam milidetik
     # Membuat label untuk menampilkan waktu
-    time_label = ctk.CTkLabel(main_content, pady= 150, text="00:00:00.00", font=("Helvetica", 100,))
+    time_label = ctk.CTkLabel(main_content, 
+                              pady= 150, 
+                              text="00:00:00.00", 
+                              font=("Helvetica", 100,))
     time_label.pack(pady=20)
 
     # Membuat tombol untuk kontrol stopwatch
-    start_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="▶", command=start_stopwatch)
+    start_button = ctk.CTkButton(main_content, 
+                                 width=80, 
+                                 height=80, 
+                                 corner_radius=20, 
+                                 text="▶", 
+                                 command=start_stopwatch)
     start_button.pack(side= 'left', padx=10, )
 
-    stop_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="■", command=stop_stopwatch)
+    stop_button = ctk.CTkButton(main_content, 
+                                width=80, 
+                                height=80, 
+                                corner_radius=20, 
+                                text="■", 
+                                command=stop_stopwatch)
     stop_button.pack(side= 'left', padx=210,)
 
-    reset_button = ctk.CTkButton(main_content, width=80, height=80, corner_radius=20, text="Reset", command=reset_stopwatch)
+    reset_button = ctk.CTkButton(main_content, 
+                                 width=80, 
+                                 height=80, 
+                                 corner_radius=20, 
+                                 text="Reset", 
+                                 command=reset_stopwatch)
     reset_button.pack(side= 'right', padx=10,) 
 
 # Fungsi untuk memperbarui waktu pada label
@@ -330,6 +417,8 @@ def reset_stopwatch():
     stopwatch_running = False
     stopwatch_counter = 0
     time_label.configure(text="00:00:00.00")
+    
+# ANALISIS     
 
 def analisis_page():
     global analisis_frame
