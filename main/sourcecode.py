@@ -411,6 +411,7 @@ def reset_database():
     # Menampilkan pop-up konfirmasi
     popup = ctk.CTkToplevel(app)
     popup.title("Konfirmasi")
+    
     confirmation_label = ctk.CTkLabel(popup, text="Keseluruhan data analisis sudah di reset")
     confirmation_label.pack(pady=20)
     close_button = ctk.CTkButton(popup, text="Tutup", command=popup.destroy)
