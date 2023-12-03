@@ -108,7 +108,7 @@ def pomodoro_page():
     notifier = ToastNotifier()
 
     #values
-    timer_seconds = 1 * 60  # 30 minutes
+    timer_seconds = 30 * 60  # 30 minutes
     rest_time = False
     timer_running = False
 
@@ -227,12 +227,12 @@ def update_timer():
                 reset_to_initial_state()
             else:
                 notifier.show_toast("Pomodoro Timer", "Waktu bekerja selesai, mulai istirahat!", duration=5)
-                timer_seconds = 1 * 60  # Istirahat 5 menit
+                timer_seconds = 5 * 60  # Istirahat 5 menit
                 rest_time = True
         else:
             if not rest_time and timer_seconds == (30 * 60):
                 notifier.show_toast("Pomodoro Timer", "30 menit telah lewat, mulai istirahat!", duration=5)
-                timer_seconds = 1 * 60  # Istirahat 5 menit
+                timer_seconds = 5 * 60  # Istirahat 5 menit
                 rest_time = True
         if not timer_running:
             break
