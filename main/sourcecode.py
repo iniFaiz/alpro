@@ -2,7 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 import time
 import csv
-import datetime
+from datetime import datetime
 from win10toast import ToastNotifier
 from tkinter import *
 from threading import Thread
@@ -108,7 +108,7 @@ def pomodoro_page():
     notifier = ToastNotifier()
 
     #values
-    timer_seconds = 30 * 60  # 30 minutes
+    timer_seconds = 1 * 60  # 30 minutes
     rest_time = False
     timer_running = False
 
@@ -128,33 +128,11 @@ def pomodoro_page():
     add_button.pack(side='left', padx=210, pady=10)
     subtract_button.pack(side='right', padx=10, pady=10)
 
-def update_timer():
-    global timer_running, timer_seconds, rest_time
-    while timer_running:
-        time.sleep(1)
-        timer_seconds -= 1
-
-        if timer_seconds <= 0:
-            if rest_time:
-                timer_running = False
-                notifier.show_toast("Pomodoro Timer", "Waktu istirahat selesai!", duration=5)
-            else:
-                notifier.show_toast("Pomodoro Timer", "Waktu bekerja selesai, mulai istirahat!", duration=5)
-                timer_seconds = 5 * 60  # Istirahat 5 menit
-                rest_time = True
-        else:
-            if not rest_time and timer_seconds == (30 * 60):
-                notifier.show_toast("Pomodoro Timer", "30 menit telah lewat, mulai istirahat!", duration=5)
-                timer_seconds = 5 * 60  # Istirahat 5 menit
-                rest_time = True
-        if not timer_running:
-            break
-        minutes, seconds = divmod(timer_seconds, 60)
-        timer_label.configure(text=f"{minutes:02d}:{seconds:02d}")
 
 def start_timer():
-    global timer_running
+    global timer_running, start_time
     timer_running = True
+    start_time = datetime.now()
     thread = Thread(target=update_timer)
     thread.start()
     start_button.pack_forget()
@@ -165,10 +143,18 @@ def start_timer():
     resume_button.pack_forget()
 
 def stop_timer():
-    global timer_running
+    global timer_running, end_time, duration, save_pomodoro_session
     timer_running = False
+    end_time = datetime.now()  # Catat waktu selesai
+    duration = end_time - start_time
+    save_pomodoro_session(duration, start_time)
     stop_button.pack_forget()
     resume_button.pack(pady=10)
+
+def save_pomodoro_session(duration, start_time):
+    with open('pomodoro_sessions.csv', 'a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow([start_time.strftime("%Y-%m-%d %H:%M:%S"), str(duration)])
 
 def resume_timer():
     global timer_running
@@ -179,7 +165,11 @@ def resume_timer():
     stop_button.pack(pady=10)
 
 def reset_timer():
-    global timer_seconds, rest_time, timer_running
+    global timer_seconds, rest_time, timer_running, update_timer_label
+    if timer_running:
+        end_time = datetime.now()  # Catat waktu saat reset
+        duration = end_time - start_time  # Hitung durasi
+        save_pomodoro_session(duration, start_time)  # Simpan sesi ke CSV
     timer_running = False
     timer_seconds = 30 * 60
     rest_time = False
@@ -206,6 +196,48 @@ def subtract_time():
 def update_timer_label():
     minutes, seconds = divmod(timer_seconds, 60)
     timer_label.configure(text=f"{minutes:02d}:{seconds:02d}")
+
+def reset_to_initial_state():
+    global timer_seconds, rest_time, timer_running
+    timer_running = False
+    timer_seconds = 30 * 60  # Reset waktu ke 30 menit
+    rest_time = False
+    update_timer_label()
+    # Kembali ke tampilan awal
+    stop_button.pack_forget()
+    reset_button.pack_forget()
+    resume_button.pack_forget()
+    start_button.pack(side='left', padx=10, pady=10)
+    add_button.pack(side='left', padx=210, pady=10)
+    subtract_button.pack(side='right', padx=10, pady=10)
+
+def update_timer():
+    global timer_running, timer_seconds, rest_time
+    while timer_running:
+        time.sleep(1)
+        timer_seconds -= 1
+
+        if timer_seconds <= 0:
+            end_time = datetime.now()  # Catat waktu saat timer berakhir
+            duration = end_time - start_time  # Hitung durasi
+            if rest_time:
+                timer_running = False
+                notifier.show_toast("Pomodoro Timer", "Waktu istirahat selesai!", duration=5)
+                save_pomodoro_session(duration, start_time)
+                reset_to_initial_state()
+            else:
+                notifier.show_toast("Pomodoro Timer", "Waktu bekerja selesai, mulai istirahat!", duration=5)
+                timer_seconds = 1 * 60  # Istirahat 5 menit
+                rest_time = True
+        else:
+            if not rest_time and timer_seconds == (30 * 60):
+                notifier.show_toast("Pomodoro Timer", "30 menit telah lewat, mulai istirahat!", duration=5)
+                timer_seconds = 1 * 60  # Istirahat 5 menit
+                rest_time = True
+        if not timer_running:
+            break
+        minutes, seconds = divmod(timer_seconds, 60)
+        timer_label.configure(text=f"{minutes:02d}:{seconds:02d}")
 
  
 def todo_page():
@@ -254,7 +286,22 @@ def add_task():
 def delete_task():
     selected_task_index = task_listbox.curselection()
     if selected_task_index:
+        # Menghapus task dari Listbox
         task_listbox.delete(selected_task_index)
+
+        # Membaca semua task dari CSV dan menyimpan kecuali yang dihapus
+        remaining_tasks = []
+        with open('todolist.csv', 'r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            for index, row in enumerate(reader):
+                if index != selected_task_index[0]:
+                    remaining_tasks.append(row)
+
+        # Menulis ulang file CSV dengan task yang tersisa
+        with open('todolist.csv', 'w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            for task in remaining_tasks:
+                writer.writerow(task)
 
 #load database todo
 def load_datatodo():
@@ -302,7 +349,7 @@ def stopwatch_page():
 def update_time():
     if stopwatch_running:
         global stopwatch_counter
-        stopwatch_counter += 16  # Menambah 10 milidetik
+        stopwatch_counter += int(13.5)
         milliseconds = stopwatch_counter % 1000
         seconds = (stopwatch_counter // 1000) % 60
         minutes = (stopwatch_counter // (1000 * 60)) % 60
@@ -332,7 +379,45 @@ def reset_stopwatch():
     time_label.configure(text="00:00:00.00")
 
 def analisis_page():
-    global analisis_frame
+    global analisis_frame, data_listbox
     analisis_frame = ctk.CTkFrame(master=main_content)
+    analisis_frame.pack(pady=20, padx=20, fill="both", expand=True)
+
+    # Membuat Listbox untuk menampilkan data
+    data_listbox = tk.Listbox(analisis_frame)
+    data_listbox.pack(pady=20, fill="both", expand=True)
+
+    # Membaca dan menampilkan data dari CSV
+    try:
+        with open('pomodoro_sessions.csv', 'r', newline='', encoding='utf-8') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                data_listbox.insert(tk.END, row)
+    except FileNotFoundError:
+        # Tindakan jika file tidak ditemukan
+        data_listbox.insert(tk.END, "Data tidak ditemukan")
+
+    # Tombol reset
+    reset_button = ctk.CTkButton(analisis_frame, text="Reset Data", command=reset_database)
+    reset_button.pack(pady=10)
+
+def reset_database():
+    # Mengosongkan file CSV
+    open('pomodoro_sessions.csv', 'w').close()
+
+    # Mengosongkan data di Listbox
+    data_listbox.delete(0, tk.END)
+
+    # Menampilkan pop-up konfirmasi
+    popup = ctk.CTkToplevel(app)
+    popup.title("Konfirmasi")
+    confirmation_label = ctk.CTkLabel(popup, text="Keseluruhan data analisis sudah di reset")
+    confirmation_label.pack(pady=20)
+    close_button = ctk.CTkButton(popup, text="Tutup", command=popup.destroy)
+    close_button.pack(pady=10)
+
+
+
+
 
 app.mainloop()
